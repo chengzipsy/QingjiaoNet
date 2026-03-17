@@ -7,8 +7,8 @@ from model_v2 import MobileNetV2
 im_height = 160
 im_width = 160
 num_classes = 10
-alpha = 0.5  # 确保这里和你 trainGPU_mobilenet_v2.py 里的保持一致
-weights_path = './save_weights/myMobileNet.ckpt'
+alpha = 0.35  # 确保这里和你 trainGPU_mobilenet_v2.py 里的保持一致
+weights_path = 'save_weights\epoch30_batch32_learningrate0.001_test_loss0.2049214243888855_wh160.ckpt'
 dataset_dir = './dataset_dealed/val' # 使用验证集的一小部分作为代表性数据
 
 def main():
@@ -54,7 +54,7 @@ def main():
     tflite_quant_model = converter.convert()
 
     # ================= 5. 保存量化模型 =================
-    save_path = 'mobilenet_v2_int8.tflite'
+    save_path = 'save_weights\epoch30_batch32_learningrate0.001_test_loss0.2049214243888855_wh160.tflite'
     with open(save_path, 'wb') as f:
         f.write(tflite_quant_model)
     print(f"转换成功！全整型量化模型已保存至: {save_path}")

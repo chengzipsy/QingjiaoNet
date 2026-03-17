@@ -1,11 +1,12 @@
 import os
-import sys
 from model_v2 import MobileNetV2
 import tensorflow as tf
 import json
 import time
 import glob
 import random
+from tqdm import tqdm
+
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -33,9 +34,9 @@ def main():
     if not os.path.exists("save_weights"):
         os.makedirs("save_weights")
 
-    im_height = 224
-    im_width = 224
-    batch_size = 32
+    im_height = 160
+    im_width = 160
+    batch_size = 48
     epochs = 30
 
     # class dict
@@ -102,18 +103,19 @@ def main():
                              .repeat().batch(batch_size)
 
     # 实例化模型
-    model = MobileNetV2(num_classes=10,alpha=0.5)
+    model = MobileNetV2(num_classes=10,alpha=0.35)
+
     #pre_weights_path = './pretrain0weights.ckpt'
     #assert len(glob.glob(pre_weights_path + "*")), "cannot find {}".format(pre_weights_path)
     #model.load_weights(pre_weights_path)
-    for layer_t in model.layers[:-1]:
-        layer_t.trainable = False
+    # for layer_t in model.layers[:-1]:
+    #     layer_t.trainable = False
 
     model.summary()
 
     # using keras low level api for training
     loss_object = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.0005)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
     train_loss = tf.keras.metrics.Mean(name='train_loss')
     train_accuracy = tf.keras.metrics.CategoricalAccuracy(name='train_accuracy')
@@ -149,26 +151,36 @@ def main():
         test_loss.reset_states()         # clear history info
         test_accuracy.reset_states()     # clear history info
 
-        t1 = time.perf_counter()
+        print(f"\nEpoch {epoch}/{epochs}")
+
+        train_bar = tqdm(total=train_step_num, desc="Train", unit="step", dynamic_ncols=True)
         for index, (images, labels) in enumerate(train_dataset):
             train_step(images, labels)
+            train_bar.update(1)
+            train_bar.set_postfix({
+                'loss': f"{train_loss.result():.4f}", 
+                'acc': f"{train_accuracy.result() * 100:.2f}%"
+            })
             if index+1 == train_step_num:
                 break
-        print(time.perf_counter()-t1)
+        train_bar.close()
 
+        val_bar = tqdm(total=val_step_num, desc="Val  ", unit="step", dynamic_ncols=True)
         for index, (images, labels) in enumerate(val_dataset):
             test_step(images, labels)
+            val_bar.update(1)
+            val_bar.set_postfix({
+                'loss': f"{test_loss.result():.4f}", 
+                'acc': f"{test_accuracy.result() * 100:.2f}%"
+            })
             if index+1 == val_step_num:
                 break
+        val_bar.close()
 
-        template = 'Epoch {}, Loss: {}, Accuracy: {}, Test Loss: {}, Test Accuracy: {}'
-        print(template.format(epoch,
-                              train_loss.result(),
-                              train_accuracy.result() * 100,
-                              test_loss.result(),
-                              test_accuracy.result() * 100))
         if test_loss.result() < best_test_loss:
-            model.save_weights("./save_weights/myMobileNet.ckpt".format(epoch), save_format='tf')
+            best_test_loss = test_loss.result()
+            save_path = f"./save_weights/epoch{epochs}_batch{batch_size}_learningrate0.001_wh{im_height}.ckpt"
+            model.save_weights(save_path, save_format='tf')
 
 
 if __name__ == '__main__':

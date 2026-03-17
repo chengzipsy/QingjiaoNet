@@ -63,10 +63,10 @@ class InvertedResidual(layers.Layer):
             return self.main_branch(inputs, training=training)
 
 
-def MobileNetV2(im_height=224,
-                im_width=224,
+def MobileNetV2(im_height=160,
+                im_width=160,
                 num_classes=10,
-                alpha=0.5,
+                alpha=0.35,
                 round_nearest=8,
                 include_top=True):
     block = InvertedResidual
@@ -80,7 +80,7 @@ def MobileNetV2(im_height=224,
         [6, 64, 4, 2],
         [6, 96, 3, 1],
         [6, 160, 3, 2],
-        [6, 320, 1, 1],
+        #[6, 320, 1, 1],
     ]
 
     input_image = layers.Input(shape=(im_height, im_width, 3), dtype='float32')
