@@ -19,8 +19,8 @@ def main():
 
     # 指向你解压后的flower_photos文件夹
     cwd = os.getcwd()
-    data_root = os.path.join(cwd, "dataset_orign")
-    origin_flower_path = os.path.join(data_root, "cartooon_character")
+    data_root = os.path.join(cwd, "dataset_dealed")
+    origin_flower_path = os.path.join(data_root, "added_cartoon")
     assert os.path.exists(origin_flower_path), "path '{}' does not exist.".format(origin_flower_path)
 
     flower_class = [cla for cla in os.listdir(origin_flower_path)

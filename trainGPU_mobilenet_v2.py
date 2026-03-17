@@ -22,8 +22,8 @@ def main():
             print(e)
             exit(-1)
 
-    data_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))  # get data root path
-    image_path = os.path.join(data_root, "data_set", "flower_data")  # flower data set path
+    data_root = os.path.abspath(os.path.join(os.getcwd(), ""))  # get data root path
+    image_path = os.path.join(data_root, "", "dataset_dealed")  
     train_dir = os.path.join(image_path, "train")
     validation_dir = os.path.join(image_path, "val")
     assert os.path.exists(train_dir), "cannot find {}".format(train_dir)
@@ -102,10 +102,10 @@ def main():
                              .repeat().batch(batch_size)
 
     # 实例化模型
-    model = MobileNetV2(num_classes=5)
-    pre_weights_path = './pretrain_weights.ckpt'
-    assert len(glob.glob(pre_weights_path + "*")), "cannot find {}".format(pre_weights_path)
-    model.load_weights(pre_weights_path)
+    model = MobileNetV2(num_classes=10,alpha=0.5)
+    #pre_weights_path = './pretrain0weights.ckpt'
+    #assert len(glob.glob(pre_weights_path + "*")), "cannot find {}".format(pre_weights_path)
+    #model.load_weights(pre_weights_path)
     for layer_t in model.layers[:-1]:
         layer_t.trainable = False
 

@@ -65,8 +65,8 @@ class InvertedResidual(layers.Layer):
 
 def MobileNetV2(im_height=224,
                 im_width=224,
-                num_classes=1000,
-                alpha=1.0,
+                num_classes=10,
+                alpha=0.5,
                 round_nearest=8,
                 include_top=True):
     block = InvertedResidual
