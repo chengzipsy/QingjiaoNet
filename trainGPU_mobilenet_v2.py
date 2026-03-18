@@ -24,7 +24,7 @@ def main():
             exit(-1)
 
     data_root = os.path.abspath(os.path.join(os.getcwd(), ""))  # get data root path
-    image_path = os.path.join(data_root, "", "dataset_dealed")  
+    image_path = os.path.join(data_root, "", "dataset_new_dealed")  
     train_dir = os.path.join(image_path, "train")
     validation_dir = os.path.join(image_path, "val")
     assert os.path.exists(train_dir), "cannot find {}".format(train_dir)
@@ -36,8 +36,8 @@ def main():
 
     im_height = 160
     im_width = 160
-    batch_size = 48
-    epochs = 30
+    batch_size = 64
+    epochs = 150
 
     # class dict
     data_class = [cla for cla in os.listdir(train_dir) if os.path.isdir(os.path.join(train_dir, cla))]
@@ -114,8 +114,8 @@ def main():
     model.summary()
 
     # using keras low level api for training
-    loss_object = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    loss_object = tf.keras.losses.CategoricalCrossentropy(from_logits=True,label_smoothing=0.1)
+    optimizer = tf.keras.optimizers.experimental.AdamW(learning_rate=0.001,weight_decay=1e-4,jit_compile=False)
 
     train_loss = tf.keras.metrics.Mean(name='train_loss')
     train_accuracy = tf.keras.metrics.CategoricalAccuracy(name='train_accuracy')
@@ -179,7 +179,7 @@ def main():
 
         if test_loss.result() < best_test_loss:
             best_test_loss = test_loss.result()
-            save_path = f"./save_weights/epoch{epochs}_batch{batch_size}_learningrate0.001_wh{im_height}.ckpt"
+            save_path = f"./save_weights/new_epoch{epochs}_batch{batch_size}_adamW_lr0.001_wh{im_height}/new_epoch{epochs}_batch{batch_size}_adamW_lr0.001_wh{im_height}.ckpt"
             model.save_weights(save_path, save_format='tf')
 
 

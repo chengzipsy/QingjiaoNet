@@ -19,7 +19,7 @@ def main():
 
     # 指向你解压后的flower_photos文件夹
     cwd = os.getcwd()
-    data_root = os.path.join(cwd, "dataset_dealed")
+    data_root = os.path.join(cwd, "dataset_new_dealed")
     origin_flower_path = os.path.join(data_root, "added_cartoon")
     assert os.path.exists(origin_flower_path), "path '{}' does not exist.".format(origin_flower_path)
 

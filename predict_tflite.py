@@ -9,8 +9,8 @@ from tqdm import tqdm
 def main():
     # ================= 1. 配置路径 =================
     # 【注意】请将下面的路径替换为你实际生成的 tflite 模型名！
-    tflite_path = "save_weights\epoch30_batch32_learningrate0.001_test_loss0.2049214243888855_wh160.tflite" 
-    test_images_dir = "./dataset_dealed/val"
+    tflite_path = r"save_weights\new_epoch150_batch64_adamW_lr0.001_wh160\new_epoch150_batch64_adamW_lr0.001_wh160.tflite" 
+    test_images_dir = r"dataset_new_dealed\val"
     im_height, im_width = 160, 160
     
     # ================= 2. 加载类别索引映射 =================
