@@ -24,7 +24,7 @@ def main():
             exit(-1)
 
     data_root = os.path.abspath(os.path.join(os.getcwd(), ""))  # get data root path
-    image_path = os.path.join(data_root, "", "dataset_new_dealed")  
+    image_path = os.path.join(data_root, "", "dataset_realcrop")  
     train_dir = os.path.join(image_path, "train")
     validation_dir = os.path.join(image_path, "val")
     assert os.path.exists(train_dir), "cannot find {}".format(train_dir)
@@ -34,9 +34,9 @@ def main():
     if not os.path.exists("save_weights"):
         os.makedirs("save_weights")
 
-    im_height = 160
-    im_width = 160
-    batch_size = 64
+    im_height = 64
+    im_width = 64
+    batch_size = 128
     epochs = 150
 
     # class dict
@@ -68,13 +68,20 @@ def main():
     print("using {} images for training, {} images for validation.".format(train_num,
                                                                            val_num))
 
+    random_rotate = tf.keras.layers.RandomRotation(factor=0.01, fill_mode='nearest')
     def process_train_img(img_path, label):
         label = tf.one_hot(label, depth=class_num)
         image = tf.io.read_file(img_path)
         image = tf.image.decode_jpeg(image)
         image = tf.image.convert_image_dtype(image, tf.float32)
         image = tf.image.resize(image, [im_height, im_width])
-        image = tf.image.random_flip_left_right(image)
+        #image = tf.image.random_flip_left_right(image)
+
+        image = random_rotate(image, training=True)
+        image = tf.image.random_brightness(image, max_delta=0.2) # 随机亮度
+        # image = tf.image.random_contrast(image, lower=0.8, upper=1.2) # 随机对比度
+        # image = tf.image.random_saturation(image, lower=0.8, upper=1.2)
+        # image = tf.clip_by_value(image, 0.0, 1.0)
         # image = (image - 0.5) / 0.5
         image = (image - 0.5) * 2.0
         return image, label
@@ -103,7 +110,7 @@ def main():
                              .repeat().batch(batch_size)
 
     # 实例化模型
-    model = MobileNetV2(num_classes=10,alpha=0.35)
+    model = MobileNetV2(im_height=im_height,im_width=im_width,num_classes=10,alpha=0.35)
 
     #pre_weights_path = './pretrain0weights.ckpt'
     #assert len(glob.glob(pre_weights_path + "*")), "cannot find {}".format(pre_weights_path)
@@ -179,7 +186,7 @@ def main():
 
         if test_loss.result() < best_test_loss:
             best_test_loss = test_loss.result()
-            save_path = f"./save_weights/new_epoch{epochs}_batch{batch_size}_adamW_lr0.001_wh{im_height}/new_epoch{epochs}_batch{batch_size}_adamW_lr0.001_wh{im_height}.ckpt"
+            save_path = f"./save_weights/new_process_epoch{epochs}_batch{batch_size}_adamW_lr0.001_wh{im_height}/new_process_epoch{epochs}_batch{batch_size}_adamW_lr0.001_wh{im_height}.ckpt"
             model.save_weights(save_path, save_format='tf')
 
 

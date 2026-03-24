@@ -4,12 +4,13 @@ import tensorflow as tf
 from model_v2 import MobileNetV2
 
 # ================= 1. 参数配置 (必须与训练时完全一致) =================
-im_height = 160
-im_width = 160
+im_height = 64
+im_width = 64
 num_classes = 10
-alpha = 0.35  # 确保这里和你 trainGPU_mobilenet_v2.py 里的保持一致
-weights_path = r'save_weights\new_epoch150_batch64_adamW_lr0.001_wh160\new_epoch150_batch64_adamW_lr0.001_wh160.ckpt'
-dataset_dir = './dataset_new_dealed/val' # 使用验证集的一小部分作为代表性数据
+alpha = 0.35
+root_path=r'save_weights\new_process_epoch150_batch128_adamW_lr0.001_wh64\new_process_epoch150_batch128_adamW_lr0.001_wh64'
+weights_path = root_path+'.ckpt'
+dataset_dir = r'dataset_realcrop\val' # 使用验证集的一小部分作为代表性数据
 
 def main():
     # ================= 2. 实例化模型并加载权重 =================
@@ -54,7 +55,7 @@ def main():
     tflite_quant_model = converter.convert()
 
     # ================= 5. 保存量化模型 =================
-    save_path = r'save_weights\new_epoch150_batch64_adamW_lr0.001_wh160\new_epoch150_batch64_adamW_lr0.001_wh160'+'.tflite'
+    save_path = root_path+'.tflite'
     with open(save_path, 'wb') as f:
         f.write(tflite_quant_model)
     print(f"转换成功！全整型量化模型已保存至: {save_path}")
