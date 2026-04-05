@@ -85,7 +85,7 @@ def MobileNetV2(im_height=128,
 
     input_image = layers.Input(shape=(im_height, im_width, 3), dtype='float32')
     # conv1
-    x = ConvBNReLU(input_channel, stride=1, name='Conv')(input_image)#针对64*64修改成1 正常是2 看看效果
+    x = ConvBNReLU(input_channel, stride=2, name='Conv')(input_image)
     # building inverted residual residual blockes
     for idx, (t, c, n, s) in enumerate(inverted_residual_setting):
         output_channel = _make_divisible(c * alpha, round_nearest)

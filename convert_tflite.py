@@ -8,31 +8,30 @@ im_height = 64
 im_width = 64
 num_classes = 10
 alpha = 0.35
-root_path=r'save_weights\new_process_epoch150_batch128_adamW_lr0.001_wh64\new_process_epoch150_batch128_adamW_lr0.001_wh64'
+root_path=r'save_weights\num_newdata_modelv2_epoch39_batch160_adamW_lr0.001_loss0.5093_wh64\num_newdata_modelv2_epoch39_batch160_adamW_lr0.001_loss0.5093_wh64'
 weights_path = root_path+'.ckpt'
-dataset_dir = r'dataset_realcrop\val' # 使用验证集的一小部分作为代表性数据
+dataset_dir = r'num_photo\val' # 使用验证集的一小部分作为代表性数据
 
 def main():
-    # ================= 2. 实例化模型并加载权重 =================
     print("正在加载模型和权重...")
     model = MobileNetV2(im_height=im_height, im_width=im_width, num_classes=num_classes, alpha=alpha)
-    # 使用 expect_partial() 消除一些非关键变量未加载的警告
     model.load_weights(weights_path).expect_partial() 
 
-    # ================= 3. 构建代表性数据生成器 =================
-    # 获取 100 张验证集图片路径用于校准
     image_paths = glob.glob(os.path.join(dataset_dir, "*/*.jpg"))[:100]
 
+    random_translate = tf.keras.layers.RandomTranslation(height_factor=0.1, width_factor=0.1, fill_mode='nearest')    
+    random_zoom = tf.keras.layers.RandomZoom(height_factor=(-0.15, 0.15), width_factor=(-0.15, 0.15), fill_mode='nearest')
     def representative_data_gen():
         for img_path in image_paths:
-            # 这里的预处理必须和 trainGPU_mobilenet_v2.py 的 process_val_img 完全一致
             image = tf.io.read_file(img_path)
             image = tf.image.decode_jpeg(image)
             image = tf.image.convert_image_dtype(image, tf.float32)
             image = tf.image.resize(image, [im_height, im_width])
-            image = (image - 0.5) * 2.0  # 归一化到 [-1, 1]
+
+            image = random_translate(image, training=True)
+            image = random_zoom(image, training=True)
+            image = (image - 0.5) * 2.0
             
-            # TFLite 要求输入带有 batch 维度: [1, height, width, channels]
             image = tf.expand_dims(image, 0)
             yield [image]
 

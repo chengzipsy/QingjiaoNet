@@ -8,13 +8,13 @@ from tqdm import tqdm
 
 def main():
 
-    tflite_path = r"save_weights\new_process_epoch150_batch128_adamW_lr0.001_wh64\new_process_epoch150_batch128_adamW_lr0.001_wh64.tflite" 
-    test_images_dir = r"dataset_realcrop\val"
+    tflite_path = r"save_weights\num_newdata_modelv2_epoch12_batch160_adamW_lr0.001_loss0.5105_wh64\num_newdata_modelv2_epoch12_batch160_adamW_lr0.001_loss0.5105_wh64.tflite" 
+    test_images_dir = r"dataset_num_1\val"
     im_height, im_width = 64, 64
     
     # ================= 2. 加载类别索引映射 =================
     try:
-        with open('class_indices.json', 'r') as f:
+        with open('class_indices_num.json', 'r') as f:
             class_dict = json.load(f)
         # class_dict 格式形如: {"0": "class_A", "1": "class_B"}
     except FileNotFoundError:

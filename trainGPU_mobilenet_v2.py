@@ -1,4 +1,5 @@
 import os
+import shutil
 from model_v2 import MobileNetV2
 import tensorflow as tf
 import json
@@ -6,6 +7,7 @@ import time
 import glob
 import random
 from tqdm import tqdm
+import tensorflow_model_optimization as tfmot
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -24,7 +26,7 @@ def main():
             exit(-1)
 
     data_root = os.path.abspath(os.path.join(os.getcwd(), ""))  # get data root path
-    image_path = os.path.join(data_root, "", "dataset_realcrop")  
+    image_path = os.path.join(data_root, "", "num_photo")  
     train_dir = os.path.join(image_path, "train")
     validation_dir = os.path.join(image_path, "val")
     assert os.path.exists(train_dir), "cannot find {}".format(train_dir)
@@ -36,7 +38,7 @@ def main():
 
     im_height = 64
     im_width = 64
-    batch_size = 128
+    batch_size = 160
     epochs = 150
 
     # class dict
@@ -48,7 +50,7 @@ def main():
     inverse_dict = dict((val, key) for key, val in class_dict.items())
     # write dict into json file
     json_str = json.dumps(inverse_dict, indent=4)
-    with open('class_indices.json', 'w') as json_file:
+    with open('class_indices_num.json', 'w') as json_file:
         json_file.write(json_str)
 
     # load train images list
@@ -67,8 +69,10 @@ def main():
 
     print("using {} images for training, {} images for validation.".format(train_num,
                                                                            val_num))
+    
+    # random_translate = tf.keras.layers.RandomTranslation(height_factor=0.1, width_factor=0.1, fill_mode='nearest')    
+    # random_zoom = tf.keras.layers.RandomZoom(height_factor=(-0.15, 0.15), width_factor=(-0.15, 0.15), fill_mode='nearest')
 
-    random_rotate = tf.keras.layers.RandomRotation(factor=0.01, fill_mode='nearest')
     def process_train_img(img_path, label):
         label = tf.one_hot(label, depth=class_num)
         image = tf.io.read_file(img_path)
@@ -77,8 +81,10 @@ def main():
         image = tf.image.resize(image, [im_height, im_width])
         #image = tf.image.random_flip_left_right(image)
 
-        image = random_rotate(image, training=True)
-        image = tf.image.random_brightness(image, max_delta=0.2) # 随机亮度
+        # image = random_translate(image, training=True)
+        # image = random_zoom(image, training=True)
+        # image = random_rotate(image, training=True)
+        # image = tf.image.random_brightness(image, max_delta=0.2) # 随机亮度
         # image = tf.image.random_contrast(image, lower=0.8, upper=1.2) # 随机对比度
         # image = tf.image.random_saturation(image, lower=0.8, upper=1.2)
         # image = tf.clip_by_value(image, 0.0, 1.0)
@@ -152,6 +158,12 @@ def main():
     best_test_loss = float('inf')
     train_step_num = train_num // batch_size
     val_step_num = val_num // batch_size
+
+    patience = 100             # 容忍度：連續 5 個 Epoch 沒有進步就停止
+    min_delta = 0.0001         # 最小進步量：Loss 降低超過 0.001 才算進步
+    patience_counter = 0      # 記錄目前已經容忍了幾個 Epoch
+    best_weights_path = ""    # 記錄最佳權重的路徑
+
     for epoch in range(1, epochs+1):
         train_loss.reset_states()        # clear history info
         train_accuracy.reset_states()    # clear history info
@@ -184,11 +196,29 @@ def main():
                 break
         val_bar.close()
 
-        if test_loss.result() < best_test_loss:
-            best_test_loss = test_loss.result()
-            save_path = f"./save_weights/new_process_epoch{epochs}_batch{batch_size}_adamW_lr0.001_wh{im_height}/new_process_epoch{epochs}_batch{batch_size}_adamW_lr0.001_wh{im_height}.ckpt"
-            model.save_weights(save_path, save_format='tf')
 
+        current_test_loss = test_loss.result().numpy()
+        if current_test_loss < (best_test_loss - min_delta):
+            best_test_loss = current_test_loss
+            patience_counter = 0
+            
+            if epoch > 1 and 'save_dir' in locals() and os.path.exists(save_dir):
+                shutil.rmtree(save_dir) # 刪除舊的權重目錄
+            
+            save_dir = f"./save_weights/num_newdata_modelv2_epoch{epoch}_batch{batch_size}_adamW_lr0.001_loss{best_test_loss:.4f}_wh{im_height}"
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            file_name = f"num_newdata_modelv2_epoch{epoch}_batch{batch_size}_adamW_lr0.001_loss{best_test_loss:.4f}_wh{im_height}.ckpt"
+            save_path = os.path.join(save_dir, file_name)
+            model.save_weights(save_path, save_format='tf')
+            best_weights_path = save_path
+        else:
+            patience_counter += 1
+            
+            if patience_counter >= patience:
+                print(f"\n[早停觸發] 已連續 {patience} 個 Epoch 未改善，提前終止訓練！")
+                print(f"最佳模型權重保存在: {best_weights_path}")
+                break
 
 if __name__ == '__main__':
     main()
