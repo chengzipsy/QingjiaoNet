@@ -26,7 +26,7 @@ def main():
             exit(-1)
 
     data_root = os.path.abspath(os.path.join(os.getcwd(), ""))  # get data root path
-    image_path = os.path.join(data_root, "", "num_photo")  
+    image_path = os.path.join(data_root, "", "dataset_num_2")  
     train_dir = os.path.join(image_path, "train")
     validation_dir = os.path.join(image_path, "val")
     assert os.path.exists(train_dir), "cannot find {}".format(train_dir)
@@ -38,8 +38,8 @@ def main():
 
     im_height = 64
     im_width = 64
-    batch_size = 160
-    epochs = 150
+    batch_size = 128
+    epochs = 200
 
     # class dict
     data_class = [cla for cla in os.listdir(train_dir) if os.path.isdir(os.path.join(train_dir, cla))]
@@ -159,7 +159,7 @@ def main():
     train_step_num = train_num // batch_size
     val_step_num = val_num // batch_size
 
-    patience = 100             # 容忍度：連續 5 個 Epoch 沒有進步就停止
+    patience = 10             # 容忍度：連續 5 個 Epoch 沒有進步就停止
     min_delta = 0.0001         # 最小進步量：Loss 降低超過 0.001 才算進步
     patience_counter = 0      # 記錄目前已經容忍了幾個 Epoch
     best_weights_path = ""    # 記錄最佳權重的路徑
@@ -205,10 +205,10 @@ def main():
             if epoch > 1 and 'save_dir' in locals() and os.path.exists(save_dir):
                 shutil.rmtree(save_dir) # 刪除舊的權重目錄
             
-            save_dir = f"./save_weights/num_newdata_modelv2_epoch{epoch}_batch{batch_size}_adamW_lr0.001_loss{best_test_loss:.4f}_wh{im_height}"
+            save_dir = f"./save_weights/num_newdata_2_modelv2_epoch{epoch}_batch{batch_size}_adamW_lr0.001_loss{best_test_loss:.4f}_wh{im_height}"
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
-            file_name = f"num_newdata_modelv2_epoch{epoch}_batch{batch_size}_adamW_lr0.001_loss{best_test_loss:.4f}_wh{im_height}.ckpt"
+            file_name = f"num_newdata_2_modelv2_epoch{epoch}_batch{batch_size}_adamW_lr0.001_loss{best_test_loss:.4f}_wh{im_height}.ckpt"
             save_path = os.path.join(save_dir, file_name)
             model.save_weights(save_path, save_format='tf')
             best_weights_path = save_path

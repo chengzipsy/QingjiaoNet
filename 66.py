@@ -1,72 +1,109 @@
 import os
 from PIL import Image
 
-def batch_crop_images(input_root, output_root, roi):
+def crop_yolo_to_classification(img_dir, label_dir, output_dir):
     """
-    按指定 ROI 批量裁剪图片，并保持原有的文件夹结构。
-    
-    :param input_root: 原图片所在的总文件夹路径
-    :param output_root: 裁剪后图片保存的总文件夹路径
-    :param roi: 裁剪区域 (左上角 x, 左上角 y, 宽度 w, 高度 h)
+    根据 YOLO 标签精准裁剪图片，并按类别放入对应的子文件夹中
     """
-    # 解析 ROI: PIL 的 crop 函数需要 (left, upper, right, lower) 格式
-    x, y, w, h = roi
-    crop_box = (x, y, x + w, y + h)
-
-    # 支持的图片格式
-    valid_extensions = ('.jpg', '.jpeg', '.png', '.bmp')
-
-    # 遍历输入文件夹
-    for dirpath, dirnames, filenames in os.walk(input_root):
-        
-        # 获取当前文件夹相对于根目录的相对路径
-        # 例如 input_root 是 "data/in"，dirpath 是 "data/in/folder1"
-        # 那么 rel_path 就是 "folder1"
-        rel_path = os.path.relpath(dirpath, input_root)
-        
-        # 拼接出对应的输出文件夹路径
-        out_dir = os.path.join(output_root, rel_path)
-        
-        # 检查当前文件夹内是否有图片，如果有，才创建输出文件夹
-        image_files = [f for f in filenames if f.lower().endswith(valid_extensions)]
-        if image_files:
-            os.makedirs(out_dir, exist_ok=True)
-            print(f"📁 正在处理文件夹: {rel_path} ({len(image_files)} 张图片)")
-
-            # 遍历并处理每张图片
-            for filename in image_files:
-                in_file_path = os.path.join(dirpath, filename)
-                out_file_path = os.path.join(out_dir, filename)
-
-                try:
-                    # 打开图片 -> 裁剪 -> 保存
-                    with Image.open(in_file_path) as img:
-                        cropped_img = img.crop(crop_box)
-                        # quality=100 保证 JPG 保存时不压缩画质
-                        cropped_img.save(out_file_path, quality=100)
-                except Exception as e:
-                    print(f"❌ 处理图片 {filename} 时出错: {e}")
-
-if __name__ == "__main__":
-    # ================= 配置区域 =================
+    # 1. 预先创建 0 到 9 的文件夹
+    for i in range(10):
+        os.makedirs(os.path.join(output_dir, str(i)), exist_ok=True)
     
-    # 1. 设置输入和输出文件夹路径
-    # 注意：请使用完整的路径，或者确保代码在这个路径的上一级运行
-    INPUT_FOLDER = r"num_photo\photo2\photos"   # 替换为你的原文件夹路径
-    OUTPUT_FOLDER = r"num_photo\photo3" # 替换为你想要保存的文件夹路径
+    print(f"📁 已在 {output_dir} 创建分类文件夹")
+    print("🚀 开始精准裁剪...")
     
-    # 2. 设置你的 ROI (Region of Interest)
-    # 格式为: (x, y, width, height)
-    # 因为你的原图是 320x240，请确保 x+width <= 320 且 y+height <= 240
-    # 例如：从坐标(50, 50)开始，裁剪一个 200x150 的区域
-    MY_ROI = (45, 35, 222, 165) 
+    # 记录裁剪总数
+    total_cropped = 0
     
-    # ===========================================
+    # 2. 遍历 label 文件夹中的所有 txt 文件
+    for label_file in os.listdir(label_dir):
+        if not label_file.endswith('.txt'):
+            continue
+            
+        base_name = os.path.splitext(label_file)[0]
+        
+        # 3. 寻找对应的图片文件 (支持多种常见格式)
+        img_path = None
+        for ext in ['.jpg', '.png', '.jpeg', '.bmp']:
+            temp_path = os.path.join(img_dir, base_name + ext)
+            if os.path.exists(temp_path):
+                img_path = temp_path
+                break
+                
+        if not img_path:
+            print(f"⚠️ 找不到 {label_file} 对应的图片，已跳过。")
+            continue
+            
+        try:
+            # 4. 打开图片并获取真实宽高
+            with Image.open(img_path) as img:
+                img_width, img_height = img.size
+                
+                # 5. 读取对应的 YOLO label 文件
+                with open(os.path.join(label_dir, label_file), 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    
+                # 遍历这张图片里的每一个目标 (一张图可能含有多个数字)
+                for idx, line in enumerate(lines):
+                    parts = line.strip().split()
+                    if len(parts) < 5:
+                        continue
+                        
+                    # YOLO 格式：class_id x_center y_center width height (后面都是 0~1 的比例值)
+                    class_id = int(parts[0])
+                    x_center = float(parts[1])
+                    y_center = float(parts[2])
+                    box_width = float(parts[3])
+                    box_height = float(parts[4])
+                    
+                    # 6. 将比例值还原为真实的像素坐标 [x_min, y_min, x_max, y_max]
+                    x_min = int((x_center - box_width / 2) * img_width)
+                    y_min = int((y_center - box_height / 2) * img_height)
+                    x_max = int((x_center + box_width / 2) * img_width)
+                    y_max = int((y_center + box_height / 2) * img_height)
+                    
+                    # 防呆设计：确保坐标不会超出图片边界
+                    x_min = max(0, x_min)
+                    y_min = max(0, y_min)
+                    x_max = min(img_width, x_max)
+                    y_max = min(img_height, y_max)
+                    
+                    # 检查框是否有效 (防止出现面积为 0 的异常框)
+                    if x_max <= x_min or y_max <= y_min:
+                        continue
+                        
+                    # 7. 严丝合缝地裁剪！
+                    cropped_img = img.crop((x_min, y_min, x_max, y_max))
+                    
+                    # 8. 保存到对应的类别文件夹
+                    # 命名规则：原图名_目标序号.jpg (防止一张图有多个数字导致覆盖)
+                    save_name = f"{base_name}_{idx}.jpg"
+                    
+                    # 如果推理出了 0-9 以外的意外类别，也为它动态创建文件夹
+                    class_folder = os.path.join(output_dir, str(class_id))
+                    if not os.path.exists(class_folder):
+                        os.makedirs(class_folder)
+                        
+                    save_path = os.path.join(class_folder, save_name)
+                    
+                    # 强转为 RGB 并保存 (防止原图是 RGBA 带有透明通道导致保存 JPG 报错)
+                    cropped_img.convert('RGB').save(save_path, quality=100)
+                    total_cropped += 1
+                    
+        except Exception as e:
+            print(f"❌ 处理 {label_file} 时发生错误: {e}")
 
-    # 检查输入文件夹是否存在
-    if not os.path.exists(INPUT_FOLDER):
-        print("⚠️ 错误：找不到输入文件夹，请检查 INPUT_FOLDER 路径是否正确。")
-    else:
-        print("🚀 开始批量裁剪...")
-        batch_crop_images(INPUT_FOLDER, OUTPUT_FOLDER, MY_ROI)
-        print("✅ 所有图片裁剪并保存完毕！")
+    print(f"\n✅ 任務完成！共成功裁剪並分類了 {total_cropped} 個目標數字。")
+
+# ================= 使用方法 =================
+if __name__ == '__main__':
+    # 1. 存放原圖的資料夾路徑
+    IMG_DIR = r"num_photo\images" 
+    
+    # 2. 存放 YOLO txt 標籤的資料夾路徑
+    LABEL_DIR = r"num_photo\labels" 
+    
+    # 3. 裁剪後想要存放的總資料夾路徑 (程式會自動在裡面建 0-9 資料夾)
+    OUTPUT_DIR = r"num_photo\photo_crop" 
+    
+    crop_yolo_to_classification(IMG_DIR, LABEL_DIR, OUTPUT_DIR)

@@ -3,14 +3,14 @@ import glob
 import tensorflow as tf
 from model_v2 import MobileNetV2
 
-# ================= 1. 参数配置 (必须与训练时完全一致) =================
+
 im_height = 64
 im_width = 64
 num_classes = 10
 alpha = 0.35
-root_path=r'save_weights\num_newdata_modelv2_epoch39_batch160_adamW_lr0.001_loss0.5093_wh64\num_newdata_modelv2_epoch39_batch160_adamW_lr0.001_loss0.5093_wh64'
+root_path=r'save_weights\num_newdata_2_modelv2_epoch18_batch128_adamW_lr0.001_loss0.5023_wh64\num_newdata_2_modelv2_epoch18_batch128_adamW_lr0.001_loss0.5023_wh64'
 weights_path = root_path+'.ckpt'
-dataset_dir = r'num_photo\val' # 使用验证集的一小部分作为代表性数据
+dataset_dir = r'dataset_num_2\val'
 
 def main():
     print("正在加载模型和权重...")
@@ -35,25 +35,19 @@ def main():
             image = tf.expand_dims(image, 0)
             yield [image]
 
-    # ================= 4. 配置转换器 =================
     print("开始 TFLite 转换与 INT8 量化...")
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     
-    # 开启默认优化
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    # 提供代表性数据集
     converter.representative_dataset = representative_data_gen
     
-    # 强制要求所有算子都被量化为 INT8，如果有不支持的算子会报错 (保证纯净性)
     converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
     
-    # 强制设定模型的输入和输出数据类型为 INT8 (这对微控制器极其重要)
     converter.inference_input_type = tf.int8
     converter.inference_output_type = tf.int8
 
     tflite_quant_model = converter.convert()
 
-    # ================= 5. 保存量化模型 =================
     save_path = root_path+'.tflite'
     with open(save_path, 'wb') as f:
         f.write(tflite_quant_model)

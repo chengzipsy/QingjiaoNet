@@ -18,6 +18,7 @@ flower_data
 *.mapping
 *.csv
 *.tflite
+*.txt
 checkpoint
 data
 VOCdevkit
