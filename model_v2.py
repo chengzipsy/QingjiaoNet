@@ -68,7 +68,8 @@ def MobileNetV2(im_height=128,
                 num_classes=10,
                 alpha=0.35,
                 round_nearest=8,
-                include_top=True):
+                include_top=True,
+                dropout_rate=0.2):
     block = InvertedResidual
     input_channel = _make_divisible(32 * alpha, round_nearest)
     last_channel = _make_divisible(1280 * alpha, round_nearest)
@@ -101,7 +102,7 @@ def MobileNetV2(im_height=128,
     if include_top is True:
         # building classifier
         x = layers.GlobalAveragePooling2D()(x)  # pool + flatten
-        x = layers.Dropout(0.2)(x)
+        x = layers.Dropout(dropout_rate)(x)
         output = layers.Dense(num_classes, name='Logits')(x)
     else:
         output = x
